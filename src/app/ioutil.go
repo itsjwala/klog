@@ -5,6 +5,12 @@ import (
 	"os"
 )
 
+type File struct {
+	Name     string
+	Location string
+	Path     string
+}
+
 func ReadFile(path string) (string, Error) {
 	contents, err := os.ReadFile(path)
 	if err != nil {

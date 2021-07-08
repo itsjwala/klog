@@ -29,7 +29,7 @@ type Context interface {
 	WriteFile(*File, string) Error
 	Now() gotime.Time
 	Bookmark() (*File, Error)
-	SetBookmark(string) Error
+	BookmarksWrite(*BookmarksCollection) Error
 	UnsetBookmark() Error
 	OpenInFileBrowser(string) Error
 	OpenInEditor(string) Error
@@ -70,6 +70,10 @@ func (ctx *context) KlogFolder() string {
 	return ctx.homeDir + "/.klog/"
 }
 
+func (ctx *context) bookmarksDbPath() string {
+	return ctx.KlogFolder() + "bookmarks.json"
+}
+
 func (ctx *context) MetaInfo() struct {
 	Version   string
 	BuildHash string
@@ -99,7 +103,7 @@ func (ctx *context) MetaInfo() struct {
 func retrieveInputs(
 	filePaths []string,
 	readStdin func() (string, Error),
-	bookmarkOrNil func() (*File, Error),
+	bookmarksCollection func() (*BookmarksCollection, Error),
 ) ([]string, Error) {
 	if len(filePaths) > 0 {
 		var result []string
@@ -119,11 +123,11 @@ func retrieveInputs(
 	if stdin != "" {
 		return []string{stdin}, nil
 	}
-	b, err := bookmarkOrNil()
+	b, err := bookmarksCollection()
 	if err != nil {
 		return nil, err
 	} else if b != nil {
-		content, err := ReadFile(b.Path)
+		content, err := ReadFile(b.GetDefault().Target.Path)
 		if err != nil {
 			return nil, err
 		}
@@ -141,7 +145,7 @@ func retrieveInputs(
 }
 
 func (ctx *context) ReadInputs(paths ...string) ([]Record, error) {
-	inputs, err := retrieveInputs(paths, ReadStdin, ctx.bookmarkOrNil)
+	inputs, err := retrieveInputs(paths, ReadStdin, ctx.retrieveBookmarksCollection)
 	if err != nil {
 		return nil, err
 	}
@@ -158,10 +162,10 @@ func (ctx *context) ReadInputs(paths ...string) ([]Record, error) {
 
 func (ctx *context) ReadFileInput(path string) (*parser.ParseResult, *File, error) {
 	if path == "" {
-		b, err := ctx.bookmarkOrNil()
+		bookmarksCollection, err := ctx.retrieveBookmarksCollection()
 		if err != nil {
 			return nil, nil, err
-		} else if b == nil {
+		} else if bookmarksCollection.GetDefault() == nil {
 			return nil, nil, NewErrorWithCode(
 				NO_TARGET_FILE,
 				"No file specified",
@@ -169,7 +173,7 @@ func (ctx *context) ReadFileInput(path string) (*parser.ParseResult, *File, erro
 				nil,
 			)
 		}
-		path = b.Path
+		path = bookmarksCollection.GetDefault().Target.Path
 	}
 	content, err := ReadFile(path)
 	if err != nil {
@@ -193,12 +197,6 @@ func (ctx *context) Now() gotime.Time {
 	return gotime.Now()
 }
 
-type File struct {
-	Name     string
-	Location string
-	Path     string
-}
-
 func newFile(path string) *File {
 	return &File{
 		Name:     filepath.Base(path),
@@ -207,56 +205,47 @@ func newFile(path string) *File {
 	}
 }
 
-func (ctx *context) bookmarkOrNil() (*File, Error) {
-	bookmarkPath := ctx.bookmarkOrigin()
-	dest, err := os.Readlink(bookmarkPath)
+func (ctx *context) retrieveBookmarksCollection() (*BookmarksCollection, Error) {
+	bookmarksDbPath := ctx.bookmarksDbPath()
+	bookmarksJson, err := ReadFile(bookmarksDbPath)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
-	_, err = os.Stat(dest)
+	bookmarksCollection, err := ParseBookmarks(bookmarksJson)
 	if err != nil {
-		return nil, NewErrorWithCode(
-			BOOKMARK_ACCESS_ERROR,
-			"Bookmark doesn’t point to valid file",
-			"Please check the current bookmark location or set a new one",
-			err,
-		)
+		return nil, err
 	}
-	return newFile(dest), nil
-}
-
-func (ctx *context) bookmarkOrigin() string {
-	return ctx.KlogFolder() + "bookmark.klg"
+	return bookmarksCollection, nil
 }
 
 func (ctx *context) Bookmark() (*File, Error) {
-	b, err := ctx.bookmarkOrNil()
+	b, err := ctx.retrieveBookmarksCollection()
 	if err != nil {
 		return nil, err
 	}
 	if b == nil {
 		return nil, NewErrorWithCode(
-			NO_BOOKMARK_SET_ERROR,
+			BOOKMARK_NOT_SET,
 			"No bookmark set",
 			"You can set a bookmark by running: klog bookmark set somefile.klg",
 			err,
 		)
 	}
-	return b, nil
+	return b.GetDefault().Target, nil
 }
 
-func (ctx *context) SetBookmark(path string) Error {
-	bookmark, err := filepath.Abs(path)
-	if err != nil {
-		return NewErrorWithCode(
-			BOOKMARK_ACCESS_ERROR,
-			"Invalid target file",
-			"Please check the file path",
-			err,
-		)
-	}
+func (ctx *context) BookmarksWrite(collection *BookmarksCollection) Error {
+	//bookmark, err := filepath.Abs(path)
+	//if err != nil {
+	//	return NewErrorWithCode(
+	//		BOOKMARK_ACCESS_ERROR,
+	//		"Invalid target file",
+	//		"Please check the file path",
+	//		err,
+	//	)
+	//}
 	klogFolder := ctx.KlogFolder()
-	err = os.MkdirAll(klogFolder, 0700)
+	err := os.MkdirAll(klogFolder, 0700)
 	flagAsHidden(klogFolder)
 	if err != nil {
 		return NewError(
@@ -265,19 +254,11 @@ func (ctx *context) SetBookmark(path string) Error {
 			err,
 		)
 	}
-	appErr := ctx.UnsetBookmark()
-	if appErr != nil {
-		return appErr
-	}
-	appErr = createSymlinkForBookmark(bookmark, ctx.bookmarkOrigin())
-	if appErr != nil {
-		return appErr
-	}
-	return nil
+	return WriteToFile(ctx.bookmarksDbPath(), collection.ToJson())
 }
 
 func (ctx *context) UnsetBookmark() Error {
-	err := os.Remove(ctx.bookmarkOrigin())
+	err := os.Remove(ctx.bookmarksDbPath())
 	if err != nil && !os.IsNotExist(err) {
 		return NewErrorWithCode(
 			BOOKMARK_ACCESS_ERROR,

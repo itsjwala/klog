@@ -6,10 +6,11 @@ import (
 )
 
 type Bookmark struct {
-	Get   BookmarkGet   `cmd name:"get" group:"Bookmark" help:"Show current bookmark"`
-	Set   BookmarkSet   `cmd name:"set" group:"Bookmark" help:"Set bookmark to a file"`
-	Edit  BookmarkEdit  `cmd name:"edit" group:"Bookmark" help:"Open bookmark in your editor"`
-	Unset BookmarkUnset `cmd name:"unset" group:"Bookmark" help:"Clear current bookmark"`
+	//List   BookmarkList   `cmd name:"list" group:"Bookmark" help:"Show all available bookmarks"` // TODO
+	Set    BookmarkSet    `cmd name:"set" group:"Bookmark" help:"Set bookmark to a file"`
+	Unset  BookmarkUnset  `cmd name:"unset" group:"Bookmark" help:"Clear current bookmark"`
+	//Rename BookmarkRename `cmd name:"rename" group"Bookmark" help:"Change the name of a bookmark"` // TODO
+	Edit   BookmarkEdit   `cmd name:"edit" group:"Bookmark" help:"Open bookmark in your $EDITOR"`
 }
 
 func (opt *Bookmark) Help() string {
@@ -19,32 +20,17 @@ This is handy in case you always use the same file.
 You can then interact with it regardless of your current working directory.`
 }
 
-type BookmarkGet struct {
-	lib.QuietArgs
-}
-
-func (opt *BookmarkGet) Run(ctx app.Context) error {
-	b, err := ctx.Bookmark()
-	if err != nil {
-		return err
-	}
-	if !opt.Quiet {
-		ctx.Print("Current bookmark: ")
-	}
-	ctx.Print(b.Path + "\n")
-	return nil
-}
-
 type BookmarkSet struct {
-	File string `arg type:"existingfile" help:".klg source file"`
+	File     string `arg type:"existingfile" help:".klg source file"`
+	Bookmark string `arg help:"The name for the bookmark"`
 	lib.QuietArgs
 }
 
 func (args *BookmarkSet) Run(ctx app.Context) error {
-	err := ctx.SetBookmark(args.File)
-	if err != nil {
-		return err
-	}
+	//err := ctx.BookmarksWrite(args.File)
+	//if err != nil {
+	//	return err
+	//}
 	if !args.Quiet {
 		ctx.Print("Bookmarked file ")
 	}

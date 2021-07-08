@@ -99,7 +99,7 @@ func (ctx *TestingContext) Now() gotime.Time {
 	return ctx.now
 }
 
-func (ctx *TestingContext) SetBookmark(_ string) app.Error {
+func (ctx *TestingContext) BookmarksWrite(_ string) app.Error {
 	return nil
 }
 
