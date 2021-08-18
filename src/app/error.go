@@ -2,13 +2,15 @@ package app
 
 type Code int
 
+// Don’t change the numbers, as external scripts could rely on them.
 const (
-	GENERAL_ERROR Code = iota + 1
-	NO_INPUT_ERROR
-	NO_TARGET_FILE
-	IO_ERROR
-	BOOKMARK_ACCESS_ERROR
-	BOOKMARK_NOT_SET
+	GENERAL_ERROR             Code = 1
+	NO_INPUT_ERROR            Code = 2
+	NO_TARGET_FILE            Code = 3
+	IO_ERROR                  Code = 4
+	BOOKMARK_ACCESS_ERROR     Code = 5
+	BOOKMARK_NOT_SET          Code = 6
+	NO_SUCH_FILE_OR_DIRECTORY Code = 7
 )
 
 func (c Code) ToInt() int {

@@ -31,12 +31,17 @@ func ParseBookmarks(jsonText string) (*BookmarksCollection, Error) {
 			err,
 		)
 	}
+	collection := NewBookmarksCollection()
+	for _, d := range data {
+		collection.Set(d.Alias, d.Path)
+	}
+	return collection, nil
+}
+
+func NewBookmarksCollection() *BookmarksCollection {
 	var collection BookmarksCollection
 	collection = make(map[string]*File)
-	for _, d := range data {
-		collection[d.Alias] = newFile(d.Path)
-	}
-	return &collection, nil
+	return &collection
 }
 
 func (c *BookmarksCollection) ToJson() string {
@@ -44,8 +49,8 @@ func (c *BookmarksCollection) ToJson() string {
 	i := 0
 	for name, file := range *c {
 		data[i] = BookmarkJson{
-			Path:      file.Path,
-			Alias:     name,
+			Path:  file.Path,
+			Alias: name,
 		}
 		i++
 	}
@@ -66,6 +71,14 @@ func (c *BookmarksCollection) ToJson() string {
 
 func (c *BookmarksCollection) Count() int {
 	return len(*c)
+}
+
+func (c *BookmarksCollection) All() []Bookmark {
+	var result []Bookmark
+	for name, file := range *c {
+		result = append(result, Bookmark{name, file})
+	}
+	return result
 }
 
 func (c *BookmarksCollection) Lookup(alias string) (*Bookmark, *AppError) {

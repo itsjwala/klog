@@ -28,7 +28,7 @@ type Context interface {
 	ReadFileInput(string) (*parser.ParseResult, *File, error)
 	WriteFile(*File, string) Error
 	Now() gotime.Time
-	Bookmark() (*File, Error)
+	Bookmarks() (*BookmarksCollection, Error)
 	BookmarksWrite(*BookmarksCollection) Error
 	UnsetBookmark() Error
 	OpenInFileBrowser(string) Error
@@ -72,6 +72,10 @@ func (ctx *context) KlogFolder() string {
 
 func (ctx *context) bookmarksDbPath() string {
 	return ctx.KlogFolder() + "bookmarks.json"
+}
+
+func (ctx *context) legacyBookmark() *legacyBookmark {
+	return &legacyBookmark{ctx.KlogFolder(), "bookmark.klg"}
 }
 
 func (ctx *context) MetaInfo() struct {
@@ -209,6 +213,15 @@ func (ctx *context) retrieveBookmarksCollection() (*BookmarksCollection, Error) 
 	bookmarksDbPath := ctx.bookmarksDbPath()
 	bookmarksJson, err := ReadFile(bookmarksDbPath)
 	if err != nil {
+		if err.Code() == NO_SUCH_FILE_OR_DIRECTORY {
+			convertedLegacyBookmark := ctx.legacyBookmark().get()
+			if convertedLegacyBookmark != nil {
+				return convertedLegacyBookmark, nil
+			}
+			// If no file exists, just assume an empty DB file.
+			return NewBookmarksCollection(), nil
+		}
+		// For all other errors we bail out, because the file is probably corrupt.
 		return nil, err
 	}
 	bookmarksCollection, err := ParseBookmarks(bookmarksJson)
@@ -218,20 +231,20 @@ func (ctx *context) retrieveBookmarksCollection() (*BookmarksCollection, Error) 
 	return bookmarksCollection, nil
 }
 
-func (ctx *context) Bookmark() (*File, Error) {
-	b, err := ctx.retrieveBookmarksCollection()
+func (ctx *context) Bookmarks() (*BookmarksCollection, Error) {
+	bc, err := ctx.retrieveBookmarksCollection()
 	if err != nil {
 		return nil, err
 	}
-	if b == nil {
-		return nil, NewErrorWithCode(
-			BOOKMARK_NOT_SET,
-			"No bookmark set",
-			"You can set a bookmark by running: klog bookmark set somefile.klg",
-			err,
-		)
-	}
-	return b.GetDefault().Target, nil
+	//if bc == nil {
+	//	return nil, NewErrorWithCode(
+	//		BOOKMARK_NOT_SET,
+	//		"No bookmark set",
+	//		"You can set a bookmark by running: klog bookmark set somefile.klg",
+	//		err,
+	//	)
+	//}
+	return bc, nil
 }
 
 func (ctx *context) BookmarksWrite(collection *BookmarksCollection) Error {
@@ -254,6 +267,7 @@ func (ctx *context) BookmarksWrite(collection *BookmarksCollection) Error {
 			err,
 		)
 	}
+	ctx.legacyBookmark().cleanup()
 	return WriteToFile(ctx.bookmarksDbPath(), collection.ToJson())
 }
 

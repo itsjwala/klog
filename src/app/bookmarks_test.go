@@ -14,7 +14,7 @@ func TestParsesEmptyJsonIntoEmptyBookmarkCollection(t *testing.T) {
 }
 
 func TestParsingFailsIfJsonIsInvalidOrMalformed(t *testing.T) {
-	for _, json := range []string {
+	for _, json := range []string{
 		``,
 		`[{"foo": `,
 		`{"alias": "foo", "xyz": true}`,
@@ -72,26 +72,26 @@ func TestEmptyDefault(t *testing.T) {
 
 	noDefault, _ := ParseBookmarks(`[
 		{"alias": "foo", "path": "~/foo.klg"},
-		{"alias": "bar", "path": "~/bar.klg"}
+		{"alias": "asdf", "path": "~/asdf.klg"}
 	]`)
 	assert.Nil(t, noDefault.GetDefault())
 }
 
 func TestDefaultBookmark(t *testing.T) {
 	bookmarks, _ := ParseBookmarks(`[
-		{"alias": "default", "path": "~/foo.klg"},
+		{"alias": "default", "path": "~/default.klg"},
 		{"alias": "bar", "path": "~/bar.klg"}
 	]`)
 	def := bookmarks.GetDefault()
 	require.NotNil(t, def)
 	assert.Equal(t, "default", def.Alias)
-	assert.Equal(t, "~/foo.klg", def.Target.Path)
+	assert.Equal(t, "~/default.klg", def.Target.Path)
 }
 
 func TestRenameBookmarkFailsIfNotFound(t *testing.T) {
 	bookmarks, _ := ParseBookmarks(`[
 		{"alias": "foo", "path": "~/foo.klg"},
-		{"alias": "bar", "path": "~/bar.klg"}
+		{"alias": "default", "path": "~/default.klg"}
 	]`)
 	renameErr := bookmarks.Rename("doesnotexist", "asdf")
 	require.Error(t, renameErr)
@@ -100,7 +100,7 @@ func TestRenameBookmarkFailsIfNotFound(t *testing.T) {
 func TestRenameBookmark(t *testing.T) {
 	bookmarks, _ := ParseBookmarks(`[
 		{"alias": "foo", "path": "~/foo.klg"},
-		{"alias": "bar", "path": "~/bar.klg"}
+		{"alias": "default", "path": "~/default.klg"}
 	]`)
 	countBefore := bookmarks.Count()
 	renameErr := bookmarks.Rename("foo", "asdf")

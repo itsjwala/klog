@@ -14,8 +14,8 @@ func render(ctx app.Context, agent *launchAgent) []menuet.MenuItem {
 	var items []menuet.MenuItem
 
 	items = append(items, func() []menuet.MenuItem {
-		file, err := ctx.Bookmark()
-		if err != nil {
+		bookmarks, err := ctx.Bookmarks()
+		if err != nil || bookmarks.GetDefault() == nil {
 			return []menuet.MenuItem{{
 				Text:       "No bookmark specified",
 				FontWeight: menuet.WeightBold,
@@ -25,6 +25,7 @@ func render(ctx app.Context, agent *launchAgent) []menuet.MenuItem {
 				Text: "klog bookmark set yourfile.klg",
 			}}
 		}
+		file := bookmarks.GetDefault().Target
 		rs, pErr := ctx.ReadInputs()
 		if pErr != nil {
 			return []menuet.MenuItem{{
