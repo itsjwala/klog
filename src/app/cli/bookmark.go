@@ -29,7 +29,7 @@ func (args *BookmarkList) Run(ctx app.Context) error {
 		return err
 	}
 	for _, b := range bs.All() {
-		ctx.Print(fmt.Sprintf("@%s  ->  %s", b.Alias, b.Target.Path))
+		ctx.Print(fmt.Sprintf("%s  ->  %s", b.Alias.PrettyName(), b.Target.Path))
 	}
 	ctx.Print("\n")
 	return nil

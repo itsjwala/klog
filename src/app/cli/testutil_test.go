@@ -99,16 +99,12 @@ func (ctx *TestingContext) Now() gotime.Time {
 	return ctx.now
 }
 
-func (ctx *TestingContext) BookmarksWrite(_ string) app.Error {
+func (ctx *TestingContext) BookmarksWrite(_ *app.BookmarksCollection) app.Error {
 	return nil
 }
 
-func (ctx *TestingContext) Bookmark() (*app.File, app.Error) {
-	return &app.File{
-		Name:     "myfile.klg",
-		Location: "/",
-		Path:     "/myfile.klg",
-	}, nil
+func (ctx *TestingContext) Bookmarks() (*app.BookmarksCollection, app.Error) {
+	return app.NewBookmarksCollection(), nil
 }
 
 func (ctx *TestingContext) UnsetBookmark() app.Error {

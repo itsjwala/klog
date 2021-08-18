@@ -4,16 +4,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"sort"
+	"strings"
 )
 
-var DEFAULT = "default"
+var DEFAULT = NewAlias("default")
+
+type BookmarkAlias string
 
 type Bookmark struct {
-	Alias  string
+	Alias  BookmarkAlias
 	Target *File
 }
 
-type BookmarksCollection map[string]*File
+type BookmarksCollection map[BookmarkAlias]*File
 
 type BookmarkJson struct {
 	Alias string `json:"alias"`
@@ -33,24 +36,24 @@ func ParseBookmarks(jsonText string) (*BookmarksCollection, Error) {
 	}
 	collection := NewBookmarksCollection()
 	for _, d := range data {
-		collection.Set(d.Alias, d.Path)
+		collection.Set(NewAlias(d.Alias), d.Path)
 	}
 	return collection, nil
 }
 
 func NewBookmarksCollection() *BookmarksCollection {
 	var collection BookmarksCollection
-	collection = make(map[string]*File)
+	collection = make(map[BookmarkAlias]*File)
 	return &collection
 }
 
 func (c *BookmarksCollection) ToJson() string {
 	data := make([]BookmarkJson, len(*c))
 	i := 0
-	for name, file := range *c {
+	for alias, file := range *c {
 		data[i] = BookmarkJson{
 			Path:  file.Path,
-			Alias: name,
+			Alias: alias.RawName(),
 		}
 		i++
 	}
@@ -81,7 +84,7 @@ func (c *BookmarksCollection) All() []Bookmark {
 	return result
 }
 
-func (c *BookmarksCollection) Lookup(alias string) (*Bookmark, *AppError) {
+func (c *BookmarksCollection) Lookup(alias BookmarkAlias) (*Bookmark, *AppError) {
 	file := (*c)[alias]
 	if file == nil {
 		return nil, &AppError{
@@ -102,11 +105,11 @@ func (c *BookmarksCollection) GetDefault() *Bookmark {
 	return &Bookmark{DEFAULT, defaultBookmarkPath}
 }
 
-func (c *BookmarksCollection) Set(alias string, path string) {
+func (c *BookmarksCollection) Set(alias BookmarkAlias, path string) {
 	(*c)[alias] = newFile(path)
 }
 
-func (c *BookmarksCollection) Rename(oldAlias string, newAlias string) *AppError {
+func (c *BookmarksCollection) Rename(oldAlias BookmarkAlias, newAlias BookmarkAlias) *AppError {
 	bookmark, err := c.Lookup(oldAlias)
 	if err != nil {
 		return err
@@ -116,6 +119,18 @@ func (c *BookmarksCollection) Rename(oldAlias string, newAlias string) *AppError
 	return nil
 }
 
-func (c *BookmarksCollection) Unset(name string) {
+func (c *BookmarksCollection) Unset(name BookmarkAlias) {
 	delete(*c, name)
+}
+
+func NewAlias(name string) BookmarkAlias {
+	return BookmarkAlias(strings.TrimPrefix(name, "@"))
+}
+
+func (a BookmarkAlias) PrettyName() string {
+	return "@" + a.RawName()
+}
+
+func (a BookmarkAlias) RawName() string {
+	return string(a)
 }

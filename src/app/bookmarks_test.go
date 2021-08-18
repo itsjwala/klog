@@ -37,12 +37,13 @@ func TestParsesJsonIntoBookmarkCollection(t *testing.T) {
 
 	fooBookmark, fooErr := bookmarks.Lookup("foo")
 	require.Nil(t, fooErr)
-	assert.Equal(t, "foo", fooBookmark.Alias)
+	assert.Equal(t, "foo", fooBookmark.Alias.RawName())
+	assert.Equal(t, "@foo", fooBookmark.Alias.PrettyName())
 	assert.Equal(t, "~/foo.klg", fooBookmark.Target.Path)
 
 	barBookmark, barErr := bookmarks.Lookup("bar")
 	require.Nil(t, barErr)
-	assert.Equal(t, "bar", barBookmark.Alias)
+	assert.Equal(t, "bar", barBookmark.Alias.RawName())
 	assert.Equal(t, "~/bar.klg", barBookmark.Target.Path)
 }
 
@@ -84,7 +85,8 @@ func TestDefaultBookmark(t *testing.T) {
 	]`)
 	def := bookmarks.GetDefault()
 	require.NotNil(t, def)
-	assert.Equal(t, "default", def.Alias)
+	assert.Equal(t, "default", def.Alias.RawName())
+	assert.Equal(t, "@default", def.Alias.PrettyName())
 	assert.Equal(t, "~/default.klg", def.Target.Path)
 }
 
